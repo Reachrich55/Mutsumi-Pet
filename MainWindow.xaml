@@ -1,0 +1,54 @@
+<Window x:Class="MutsuPet.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Mutsu Pet"
+        Width="420"
+        Height="420"
+        WindowStyle="None"
+        ResizeMode="NoResize"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        ShowInTaskbar="False"
+        UseLayoutRounding="True"
+        SnapsToDevicePixels="True"
+        Loaded="Window_Loaded"
+        Closing="Window_Closing"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Window.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="刷新对话" Click="RefreshMenuItem_Click" />
+            <MenuItem x:Name="PauseMenuItem" Header="暂停互动" IsCheckable="True" Click="PauseMenuItem_Click" />
+            <Separator />
+            <MenuItem Header="退出" Click="ExitMenuItem_Click" />
+        </ContextMenu>
+    </Window.ContextMenu>
+
+    <Viewbox Stretch="Fill">
+        <Canvas Width="600" Height="600">
+            <Image x:Name="PetImage"
+                   Width="600"
+                   Height="600"
+                   Stretch="Fill"
+                   RenderOptions.BitmapScalingMode="HighQuality" />
+
+            <Border Canvas.Left="58"
+                    Canvas.Top="70"
+                    Width="238"
+                    Height="124"
+                    Background="Transparent">
+                <TextBlock x:Name="SpeechText"
+                           Text="我在这里。"
+                           FontFamily="Microsoft YaHei UI"
+                           FontSize="23"
+                           FontWeight="SemiBold"
+                           Foreground="#0B3418"
+                           LineHeight="31"
+                           TextWrapping="Wrap"
+                           TextAlignment="Center"
+                           VerticalAlignment="Center"
+                           HorizontalAlignment="Stretch" />
+            </Border>
+        </Canvas>
+    </Viewbox>
+</Window>
