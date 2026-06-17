@@ -10,9 +10,12 @@ public partial class MainWindow : Window
 {
     private readonly CancellationTokenSource _shutdownTokenSource = new();
     private readonly DispatcherTimer _pollTimer;
+    private readonly DispatcherTimer _speechTimer;
     private readonly WindowsUsageMonitor _usageMonitor;
+    private readonly ChatAppMessageMonitor _chatMessageMonitor;
     private readonly LlmClient _llmClient;
     private readonly PetInteractionService _interactionService;
+    private readonly SpeechQueueService _speechQueueService = new();
     private bool _isPaused;
     private bool _isBusy;
 
@@ -25,14 +28,19 @@ public partial class MainWindow : Window
 
         var settings = AppSettings.Load();
         _usageMonitor = new WindowsUsageMonitor();
+        _chatMessageMonitor = new ChatAppMessageMonitor();
         _llmClient = new LlmClient(settings);
         _interactionService = new PetInteractionService(_usageMonitor, _llmClient);
+        _chatMessageMonitor.MessageReceived += ChatMessageMonitor_MessageReceived;
 
         _pollTimer = new DispatcherTimer
         {
             Interval = TimeSpan.FromSeconds(15)
         };
         _pollTimer.Tick += PollTimer_Tick;
+
+        _speechTimer = new DispatcherTimer();
+        _speechTimer.Tick += SpeechTimer_Tick;
 
         LoadPetImage();
     }
@@ -44,6 +52,7 @@ public partial class MainWindow : Window
     {
         PositionNearBottomRight();
         _pollTimer.Start();
+        _chatMessageMonitor.Start(this);
         await RunInteractionCheckAsync(force: true);
     }
 
@@ -53,7 +62,10 @@ public partial class MainWindow : Window
     private void Window_Closing(object? sender, CancelEventArgs e)
     {
         _pollTimer.Stop();
+        _speechTimer.Stop();
         _shutdownTokenSource.Cancel();
+        _chatMessageMonitor.MessageReceived -= ChatMessageMonitor_MessageReceived;
+        _chatMessageMonitor.Dispose();
         _usageMonitor.Dispose();
         _llmClient.Dispose();
         _shutdownTokenSource.Dispose();
@@ -84,6 +96,8 @@ public partial class MainWindow : Window
     /// </summary>
     private async void RefreshMenuItem_Click(object sender, RoutedEventArgs e)
     {
+        _speechQueueService.Clear();
+        _speechTimer.Stop();
         await RunInteractionCheckAsync(force: true);
     }
 
@@ -93,7 +107,16 @@ public partial class MainWindow : Window
     private async void PauseMenuItem_Click(object sender, RoutedEventArgs e)
     {
         _isPaused = PauseMenuItem.IsChecked;
-        SpeechText.Text = _isPaused ? "我先安静一会儿。" : "我回来啦。";
+        if (_isPaused)
+        {
+            _speechTimer.Stop();
+            _speechQueueService.Clear();
+            SpeechText.Text = "我先安静一会儿。";
+        }
+        else
+        {
+            QueueSpeechText("我回来啦。", replaceExisting: true);
+        }
 
         if (!_isPaused)
         {
@@ -115,6 +138,28 @@ public partial class MainWindow : Window
     private async void PollTimer_Tick(object? sender, EventArgs e)
     {
         await RunInteractionCheckAsync(force: false);
+    }
+
+    /// <summary>
+    /// 自动翻页计时器触发时展示下一段气泡文本。
+    /// </summary>
+    private void SpeechTimer_Tick(object? sender, EventArgs e)
+    {
+        ShowNextSpeechSegment();
+    }
+
+    /// <summary>
+    /// QQ/微信窗口监听到新消息信号时触发优先提醒。
+    /// </summary>
+    private async void ChatMessageMonitor_MessageReceived(object? sender, Models.MessageNotification notification)
+    {
+        if (_isPaused)
+        {
+            return;
+        }
+
+        var interactionTask = await Dispatcher.InvokeAsync(() => RunMessageInteractionAsync(notification));
+        await interactionTask;
     }
 
     /// <summary>
@@ -158,13 +203,13 @@ public partial class MainWindow : Window
         {
             if (force)
             {
-                SpeechText.Text = "让我看看现在的状态...";
+                SpeechText.Text = "我来啦...";
             }
 
             var line = await _interactionService.GetNextLineAsync(force, _shutdownTokenSource.Token);
             if (!string.IsNullOrWhiteSpace(line))
             {
-                SpeechText.Text = line;
+                QueueSpeechText(line, replaceExisting: force);
             }
         }
         catch (OperationCanceledException)
@@ -175,5 +220,67 @@ public partial class MainWindow : Window
         {
             _isBusy = false;
         }
+    }
+
+    /// <summary>
+    /// 根据收到的聊天消息信号生成并展示桌宠提醒。
+    /// </summary>
+    private async Task RunMessageInteractionAsync(Models.MessageNotification notification)
+    {
+        if (_isBusy)
+        {
+            return;
+        }
+
+        _isBusy = true;
+        try
+        {
+            var line = await _interactionService.GetMessageLineAsync(notification, _shutdownTokenSource.Token);
+            if (!string.IsNullOrWhiteSpace(line))
+            {
+                QueueSpeechText(line, replaceExisting: true);
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            // 应用关闭时取消请求，不需要提示用户。
+        }
+        finally
+        {
+            _isBusy = false;
+        }
+    }
+
+    /// <summary>
+    /// 将文本加入气泡展示队列并启动自动翻页。
+    /// </summary>
+    private void QueueSpeechText(string text, bool replaceExisting)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        _speechQueueService.EnqueueText(text, replaceExisting);
+        if (replaceExisting || !_speechTimer.IsEnabled)
+        {
+            ShowNextSpeechSegment();
+        }
+    }
+
+    /// <summary>
+    /// 展示队列中的下一段文本并安排下一次翻页。
+    /// </summary>
+    private void ShowNextSpeechSegment()
+    {
+        if (!_speechQueueService.TryDequeue(out var segment))
+        {
+            _speechTimer.Stop();
+            return;
+        }
+
+        SpeechText.Text = segment.Text;
+        _speechTimer.Interval = segment.DisplayDuration;
+        _speechTimer.Start();
     }
 }

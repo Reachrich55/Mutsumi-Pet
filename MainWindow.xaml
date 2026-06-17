@@ -33,7 +33,7 @@
                    RenderOptions.BitmapScalingMode="HighQuality" />
 
             <Border Canvas.Left="58"
-                    Canvas.Top="70"
+                    Canvas.Top="85"
                     Width="238"
                     Height="124"
                     Background="Transparent">

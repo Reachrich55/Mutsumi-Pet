@@ -5,7 +5,7 @@ namespace MutsuPet.Services;
 
 public sealed class PetInteractionService
 {
-    private const int LineLengthLimit = 54;
+    private const int TextLengthLimit = 280;
     private readonly WindowsUsageMonitor _usageMonitor;
     private readonly LlmClient _llmClient;
     private readonly Dictionary<InteractionTrigger, DateTimeOffset> _lastTriggerTimes = new();
@@ -48,6 +48,38 @@ public sealed class PetInteractionService
 
         MarkTriggered(trigger.Value, snapshot.CapturedAt);
         return NormalizeLine(line) ?? NormalizeLine(GetFallbackLine(snapshot, trigger.Value));
+    }
+
+    /// <summary>
+    /// 根据聊天软件新消息信号生成优先级更高的互动文本。
+    /// </summary>
+    public async Task<string?> GetMessageLineAsync(
+        MessageNotification notification,
+        CancellationToken cancellationToken)
+    {
+        var snapshot = _usageMonitor.CaptureSnapshot();
+        var trigger = SelectMessageTrigger(notification);
+        if (trigger is null || !CanTriggerMessage(trigger.Value, snapshot.CapturedAt))
+        {
+            return null;
+        }
+
+        string? line = null;
+        try
+        {
+            line = await _llmClient.GenerateLineAsync(snapshot, trigger.Value, notification, cancellationToken);
+        }
+        catch (HttpRequestException)
+        {
+            line = null;
+        }
+        catch (TaskCanceledException) when (!cancellationToken.IsCancellationRequested)
+        {
+            line = null;
+        }
+
+        MarkTriggered(trigger.Value, snapshot.CapturedAt);
+        return NormalizeLine(line) ?? NormalizeLine(GetMessageFallbackLine(notification));
     }
 
     /// <summary>
@@ -100,12 +132,14 @@ public sealed class PetInteractionService
         return trigger switch
         {
             InteractionTrigger.ManualRefresh => TimeSpan.Zero,
-            InteractionTrigger.Startup => TimeSpan.FromMinutes(10),
-            InteractionTrigger.SessionUnlock => TimeSpan.FromMinutes(2),
-            InteractionTrigger.IdleReturn => TimeSpan.FromMinutes(8),
-            InteractionTrigger.HighFocusApp => TimeSpan.FromMinutes(12),
-            InteractionTrigger.ContinuousUse => TimeSpan.FromMinutes(35),
-            _ => TimeSpan.FromMinutes(10)
+            InteractionTrigger.QqMessageReceived => TimeSpan.FromSeconds(20),
+            InteractionTrigger.WechatMessageReceived => TimeSpan.FromSeconds(20),
+            InteractionTrigger.Startup => TimeSpan.FromMinutes(1),
+            InteractionTrigger.SessionUnlock => TimeSpan.FromMinutes(1),
+            InteractionTrigger.IdleReturn => TimeSpan.FromMinutes(1),
+            InteractionTrigger.HighFocusApp => TimeSpan.FromMinutes(1),
+            InteractionTrigger.ContinuousUse => TimeSpan.FromMinutes(1),
+            _ => TimeSpan.FromMinutes(1)
         };
     }
 
@@ -116,6 +150,37 @@ public sealed class PetInteractionService
     {
         _lastAnyTriggerAt = now;
         _lastTriggerTimes[trigger] = now;
+    }
+
+    /// <summary>
+    /// 按消息来源选择聊天软件消息触发器。
+    /// </summary>
+    private static InteractionTrigger? SelectMessageTrigger(MessageNotification notification)
+    {
+        return notification.SourceKind switch
+        {
+            NotificationSourceKind.Qq => InteractionTrigger.QqMessageReceived,
+            NotificationSourceKind.WeChat => InteractionTrigger.WechatMessageReceived,
+            _ => null
+        };
+    }
+
+    /// <summary>
+    /// 判断聊天软件消息触发器是否已经过了较短的防刷屏冷却时间。
+    /// </summary>
+    private bool CanTriggerMessage(InteractionTrigger trigger, DateTimeOffset now)
+    {
+        if (now - _lastAnyTriggerAt < TimeSpan.FromSeconds(5))
+        {
+            return false;
+        }
+
+        if (!_lastTriggerTimes.TryGetValue(trigger, out var lastTriggerAt))
+        {
+            return true;
+        }
+
+        return now - lastTriggerAt >= GetCooldown(trigger);
     }
 
     /// <summary>
@@ -166,9 +231,9 @@ public sealed class PetInteractionService
             return null;
         }
 
-        return normalized.Length <= LineLengthLimit
+        return normalized.Length <= TextLengthLimit
             ? normalized
-            : normalized.Substring(0, LineLengthLimit - 1) + "…";
+            : normalized.Substring(0, TextLengthLimit - 1) + "…";
     }
 
     /// <summary>
@@ -185,6 +250,19 @@ public sealed class PetInteractionService
             InteractionTrigger.HighFocusApp => $"开始处理 {snapshot.ProcessName} 了吗？我在旁边陪着。",
             InteractionTrigger.ManualRefresh => "我看了一下，现在状态还不错。",
             _ => "我在这里，陪你一起完成今天的事。"
+        };
+    }
+
+    /// <summary>
+    /// 在 LLM 不可用时根据聊天软件消息信号生成本地备用提醒。
+    /// </summary>
+    private static string GetMessageFallbackLine(MessageNotification notification)
+    {
+        return notification.SourceKind switch
+        {
+            NotificationSourceKind.Qq => "QQ 有新消息。我先轻轻提醒一下，等你方便的时候再看就好。",
+            NotificationSourceKind.WeChat => "微信有新消息。我在旁边提醒你一下，别让重要消息等太久。",
+            _ => $"{notification.SourceDisplayName} 有新消息。我先帮你记着。"
         };
     }
 }

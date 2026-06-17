@@ -10,5 +10,7 @@ public enum InteractionTrigger
     HighFocusApp,
     IdleReturn,
     ContinuousUse,
-    SessionUnlock
+    SessionUnlock,
+    QqMessageReceived,
+    WechatMessageReceived
 }
