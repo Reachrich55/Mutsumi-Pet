@@ -1,15 +1,17 @@
 using System.Net.Http;
-using MutsuPet.Models;
+using MutsumiPet.Models;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public sealed class PetInteractionService
 {
     private const int TextLengthLimit = 280;
+    private static readonly TimeSpan GlobalInteractionCooldown = TimeSpan.FromMinutes(3);
     private readonly WindowsUsageMonitor _usageMonitor;
     private readonly LlmClient _llmClient;
     private readonly Dictionary<InteractionTrigger, DateTimeOffset> _lastTriggerTimes = new();
     private DateTimeOffset _lastAnyTriggerAt = DateTimeOffset.MinValue;
+    private string? _lastLlmLine;
 
     /// <summary>
     /// 初始化桌宠互动编排服务。
@@ -35,7 +37,7 @@ public sealed class PetInteractionService
         string? line = null;
         try
         {
-            line = await _llmClient.GenerateLineAsync(snapshot, trigger.Value, cancellationToken);
+            line = await _llmClient.GenerateLineAsync(snapshot, trigger.Value, _lastLlmLine, cancellationToken);
         }
         catch (HttpRequestException)
         {
@@ -47,7 +49,14 @@ public sealed class PetInteractionService
         }
 
         MarkTriggered(trigger.Value, snapshot.CapturedAt);
-        return NormalizeLine(line) ?? NormalizeLine(GetFallbackLine(snapshot, trigger.Value));
+        var normalizedLlmLine = NormalizeLine(line);
+        if (normalizedLlmLine is not null)
+        {
+            _lastLlmLine = normalizedLlmLine;
+            return normalizedLlmLine;
+        }
+
+        return NormalizeLine(GetFallbackLine(snapshot, trigger.Value));
     }
 
     /// <summary>
@@ -67,7 +76,12 @@ public sealed class PetInteractionService
         string? line = null;
         try
         {
-            line = await _llmClient.GenerateLineAsync(snapshot, trigger.Value, notification, cancellationToken);
+            line = await _llmClient.GenerateLineAsync(
+                snapshot,
+                trigger.Value,
+                notification,
+                _lastLlmLine,
+                cancellationToken);
         }
         catch (HttpRequestException)
         {
@@ -79,7 +93,14 @@ public sealed class PetInteractionService
         }
 
         MarkTriggered(trigger.Value, snapshot.CapturedAt);
-        return NormalizeLine(line) ?? NormalizeLine(GetMessageFallbackLine(notification));
+        var normalizedLlmLine = NormalizeLine(line);
+        if (normalizedLlmLine is not null)
+        {
+            _lastLlmLine = normalizedLlmLine;
+            return normalizedLlmLine;
+        }
+
+        return NormalizeLine(GetMessageFallbackLine(notification));
     }
 
     /// <summary>
@@ -98,7 +119,7 @@ public sealed class PetInteractionService
             UsageEventKind.SessionUnlocked => InteractionTrigger.SessionUnlock,
             UsageEventKind.IdleReturned => InteractionTrigger.IdleReturn,
             UsageEventKind.ContinuousUse => InteractionTrigger.ContinuousUse,
-            UsageEventKind.AppSwitch when IsHighFocusProcess(snapshot.ProcessName) => InteractionTrigger.HighFocusApp,
+            UsageEventKind.AppDwell when IsHighFocusProcess(snapshot.ProcessName) => InteractionTrigger.HighFocusApp,
             _ => (InteractionTrigger?)null
         };
 
@@ -110,8 +131,13 @@ public sealed class PetInteractionService
     /// </summary>
     private bool CanTrigger(InteractionTrigger trigger, DateTimeOffset now)
     {
-        var globalCooldown = TimeSpan.FromSeconds(75);
-        if (now - _lastAnyTriggerAt < globalCooldown)
+        if (trigger == InteractionTrigger.ManualRefresh)
+        {
+            return true;
+        }
+
+        if (trigger != InteractionTrigger.HighFocusApp &&
+            now - _lastAnyTriggerAt < GlobalInteractionCooldown)
         {
             return false;
         }
@@ -134,12 +160,12 @@ public sealed class PetInteractionService
             InteractionTrigger.ManualRefresh => TimeSpan.Zero,
             InteractionTrigger.QqMessageReceived => TimeSpan.FromSeconds(20),
             InteractionTrigger.WechatMessageReceived => TimeSpan.FromSeconds(20),
-            InteractionTrigger.Startup => TimeSpan.FromMinutes(1),
-            InteractionTrigger.SessionUnlock => TimeSpan.FromMinutes(1),
-            InteractionTrigger.IdleReturn => TimeSpan.FromMinutes(1),
-            InteractionTrigger.HighFocusApp => TimeSpan.FromMinutes(1),
-            InteractionTrigger.ContinuousUse => TimeSpan.FromMinutes(1),
-            _ => TimeSpan.FromMinutes(1)
+            InteractionTrigger.Startup => TimeSpan.FromMinutes(5),
+            InteractionTrigger.SessionUnlock => TimeSpan.FromMinutes(5),
+            InteractionTrigger.IdleReturn => TimeSpan.FromMinutes(5),
+            InteractionTrigger.HighFocusApp => TimeSpan.FromMinutes(10),
+            InteractionTrigger.ContinuousUse => TimeSpan.FromMinutes(30),
+            _ => TimeSpan.FromMinutes(5)
         };
     }
 

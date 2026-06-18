@@ -9,8 +9,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <None Remove="mutsu.png" />
-    <Content Include="mutsu.png">
+    <None Remove="mutsumi.png" />
+    <Content Include="mutsumi.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Update=".env">

@@ -1,4 +1,4 @@
-namespace MutsuPet.Models;
+namespace MutsumiPet.Models;
 
 /// <summary>
 /// 表示对话气泡自动翻页时显示的一段文本。

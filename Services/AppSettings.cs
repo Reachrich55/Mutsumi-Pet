@@ -1,4 +1,4 @@
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public sealed class AppSettings
 {

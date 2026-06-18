@@ -1,4 +1,4 @@
-namespace MutsuPet.Models;
+namespace MutsumiPet.Models;
 
 /// <summary>
 /// 描述聊天消息信号的来源类型。

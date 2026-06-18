@@ -1,50 +1,202 @@
-# Mutsu Pet
+<h1 align="center">Mutsumi Pet</h1>
+<p align="center">
+  <a href="README.zh-CN.md">简体中文</a>
+</p>
 
-Windows WPF 桌面宠物应用，使用当前目录的 `mutsu.png` 作为角色形象，通过 Win API 感知前台窗口、空闲时长和会话状态，并调用 OpenAI-compatible LLM 生成对话气泡文案。
+Mutsumi Pet is a Windows WPF desktop pet app. It uses Win32 APIs to observe lightweight computer usage state and calls a large language model to generate speech-bubble lines.
 
-## 运行要求
+> Current version: see the latest GitHub Release
+
+---
+
+## Current Status
+
+- **Desktop pet main window is runnable**: the entry points are `App.xaml` / `MainWindow.xaml`, with main logic in `MainWindow.xaml.cs`
+- **LLM dialogue flow is complete**: the app generates bubble text through an OpenAI-compatible `/chat/completions` endpoint and falls back to local preset lines on failure
+- **Windows usage awareness is integrated**: the app can read foreground process, window title, idle seconds, active-window duration, and session lock state
+- **Messaging app signal reminders are integrated**: likely new-message signals are detected through Win32 window events, taskbar flash shell hooks, and periodic sweeps
+- **Long text display is handled**: long LLM replies are split by punctuation and length, then shown segment by segment according to reading time
+
+---
+
+## Feature Overview
+
+### 1. Desktop Pet Display
+
+- Supports left-click dragging
+- Provides a right-click menu for refreshing dialogue, pausing interaction, and exiting
+
+### 2. Computer Usage Awareness
+
+- `WindowsUsageMonitor` uses Win32 APIs to read foreground-window and idle state
+- Current recorded context:
+  - foreground process name
+  - foreground window title
+  - idle seconds
+  - active-window duration
+  - recent usage event
+  - Windows session lock state
+
+### 3. LLM Speech Bubbles
+
+- `LlmClient` calls an OpenAI-compatible API to generate bubble lines
+- Prompts distinguish normal interaction from message reminders
+
+---
+
+## Directory Overview
+
+| Path | Description |
+| --- | --- |
+| `App.xaml` / `App.xaml.cs` | WPF application entry |
+| `MainWindow.xaml` | Desktop pet window, character image, and bubble layout |
+| `MainWindow.xaml.cs` | Window events, timers, dragging, and speech display orchestration |
+| `Services/LlmClient.cs` | LLM requests, prompt construction, and response parsing |
+| `Services/WindowsUsageMonitor.cs` | Foreground-window, idle-time, and session-state monitor |
+| `Services/ChatAppMessageMonitor.cs` | Messaging app new-message signal detection |
+| `Services/SpeechQueueService.cs` | Long-text segmentation and display timing |
+| `Services/ImageTransparencyService.cs` | Character image white-background transparency processing |
+| `Models/` | Models for usage state, triggers, and message signals |
+| `mutsu.png` | Desktop pet character image |
+| `.env.example` | LLM configuration template |
+
+---
+
+## Quick Start
+
+Requirements:
 
 - Windows 10/11
 - .NET 8 SDK
+- An OpenAI-compatible chat-completions endpoint
 
-安装 SDK 后在项目目录运行：
+### For Users: Download a Release
+
+If you only want to use the app locally, downloading the packaged Windows release is recommended. This path does not require cloning the source code or installing the .NET 8 SDK.
+
+1. Open the GitHub Releases page for this repository
+2. Download the latest `MutsuPet-*-win-x64.zip`
+3. Extract it to a local folder, for example:
+
+```text
+D:\Apps\MutsuPet
+```
+
+4. In the extracted folder, copy `.env.example` and rename the copy to `.env`
+5. Edit `.env` and fill in your own LLM configuration:
+
+```text
+LLM_API_KEY="replace-with-your-key"
+LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
+LLM_MODEL="your-model-name"
+LLM_TIMEOUT_SECONDS="60"
+```
+
+6. Run `MutsuPet.exe`
+
+`.env` must be placed in the same folder as `MutsuPet.exe`. Do not upload your `.env` file or API key to public repositories, screenshots, or issues.
+
+If the app only shows local fallback lines, the LLM configuration, network connection, or endpoint permission may be invalid. Check that the file is named exactly `.env`, that the API key is usable, and that `LLM_BASE_URL` points to an OpenAI-compatible `/v1` endpoint.
+
+### For Developers
 
 ```powershell
+git clone <your-repo-url>
+Set-Location .\mutsu_pet
+Copy-Item .\.env.example .\.env
+dotnet restore
 dotnet run
 ```
 
-## 配置
+Edit `.env` and fill in your own LLM configuration:
 
-本地 `.env` 已按当前需求创建，包含：
-
-- `LLM_API_KEY`
-- `LLM_BASE_URL`
-- `LLM_MODEL`
-- `LLM_TIMEOUT_SECONDS`
-
-`.env` 已加入 `.gitignore`，不要提交到版本库。
-
-## 交互
-
-- 左键拖动桌宠。
-- 右键菜单刷新对话、暂停互动或退出。
-- 自动互动采用轻量提醒策略：启动、空闲返回、会话解锁、连续使用和切换到高专注应用时触发，并带有冷却时间。
-- LLM 长回复会按标点自动切成多段，并按阅读时间在气泡中依次展示。
-
-## 消息提醒
-
-- 消息提醒不再依赖 Windows toast、MSIX 包身份或通知读取权限。
-- 应用启动后会通过 Win32 窗口事件、任务栏闪烁 Shell hook 和周期补扫观察 QQ/微信桌面客户端。
-- 当前只提醒“有新消息”，不会读取聊天正文、不会访问 QQ/微信本地数据库、不会注入进程或抓包。
-- 如果 QQ/微信没有暴露窗口标题、未读状态或提示窗口，桌宠可能无法识别该次消息。
-
-## 发布
-
-普通发布可以直接使用 `dotnet publish`：
-
-```powershell
-dotnet publish .\MutsuPet.csproj -c Release -r win-x64 --self-contained false
+```text
+LLM_API_KEY="replace-with-your-key"
+LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
+LLM_MODEL="your-model-name"
+LLM_TIMEOUT_SECONDS="60"
 ```
 
-## 隐私边界
+With the source setup, `.env` lives in the project root. It is ignored by `.gitignore` and should not be committed.
 
+---
+
+## Configuration and Runtime Data
+
+### LLM Configuration
+
+The app reads configuration from `.env` or environment variables. Environment variables take precedence over `.env`.
+
+| Key | Description |
+| --- | --- |
+| `LLM_API_KEY` | LLM API Key |
+| `LLM_BASE_URL` | OpenAI-compatible API base URL, usually ending with `/v1` |
+| `LLM_MODEL` | Model name |
+| `LLM_TIMEOUT_SECONDS` | Request timeout in seconds |
+
+### Runtime Artifacts
+
+The following files and folders are considered local runtime or build artifacts and should not be committed to Git:
+
+- `.env`
+- `bin/`
+- `obj/`
+- `artifacts/`
+- `.vs/`
+- `*.user`
+- `*.suo`
+
+---
+
+## Privacy Boundaries
+
+The app may send the following context to your configured LLM:
+
+- foreground process name
+- foreground window title
+- idle time
+- active-window duration
+- recent usage event
+- session lock state
+- messaging app new-message signal
+- messaging app display name
+- message signal time
+
+The app does not collect or send:
+
+- keyboard input
+- screenshots
+- messaging app chat content
+- sender names or group names
+- messaging app local databases
+- network packets
+- files from the user's computer
+
+---
+
+## Packaging and Release
+
+Publishing a self-contained Windows x64 package is recommended:
+
+```powershell
+dotnet publish .\MutsuPet.csproj `
+  -c Release `
+  -r win-x64 `
+  --self-contained true `
+  /p:PublishSingleFile=true `
+  /p:IncludeNativeLibrariesForSelfExtract=true `
+  /p:EnableCompressionInSingleFile=true `
+  -o .\artifacts\github-release\MutsumiPet-win-x64
+```
+
+---
+
+## Credits
+
+Thanks to Yousou for drawing the cute Mutsumi.
+
+---
+
+## License
+
+This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.

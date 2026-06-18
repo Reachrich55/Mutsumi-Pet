@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Threading;
 
-namespace MutsuPet;
+namespace MutsumiPet;
 
 public partial class App : Application
 {
@@ -24,7 +24,7 @@ public partial class App : Application
     {
         MessageBox.Show(
             $"遇到了一点问题：{e.Exception.Message}",
-            "Mutsu Pet",
+            "Mutsumi Pet",
             MessageBoxButton.OK,
             MessageBoxImage.Warning);
         e.Handled = true;

@@ -1,4 +1,4 @@
-namespace MutsuPet.Models;
+namespace MutsumiPet.Models;
 
 /// <summary>
 /// 描述触发桌宠主动互动的原因。

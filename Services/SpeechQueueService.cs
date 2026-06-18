@@ -1,10 +1,10 @@
-using MutsuPet.Models;
+using MutsumiPet.Models;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public sealed class SpeechQueueService
 {
-    private const int MaxSegmentLength = 44;
+    private const int MaxSegmentLength = 35;
     private readonly Queue<SpeechSegment> _segments = new();
 
     /// <summary>

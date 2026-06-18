@@ -1,4 +1,4 @@
-namespace MutsuPet.Models;
+namespace MutsumiPet.Models;
 
 /// <summary>
 /// 表示一次从 Windows API 采集到的电脑使用状态。

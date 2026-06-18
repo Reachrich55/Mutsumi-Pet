@@ -1,7 +1,7 @@
 using System.Runtime.InteropServices;
 using System.Text;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 internal static class NativeMethods
 {

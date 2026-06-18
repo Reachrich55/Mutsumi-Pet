@@ -1,7 +1,7 @@
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public static class ImageTransparencyService
 {

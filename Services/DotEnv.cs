@@ -1,6 +1,6 @@
 using System.IO;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public static class DotEnv
 {

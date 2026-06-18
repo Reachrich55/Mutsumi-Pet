@@ -3,9 +3,9 @@ using System.Text;
 using System.Windows;
 using System.Windows.Interop;
 using System.Windows.Threading;
-using MutsuPet.Models;
+using MutsumiPet.Models;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public sealed class ChatAppMessageMonitor : IDisposable
 {

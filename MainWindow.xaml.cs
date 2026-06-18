@@ -2,9 +2,9 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
-using MutsuPet.Services;
+using MutsumiPet.Services;
 
-namespace MutsuPet;
+namespace MutsumiPet;
 
 public partial class MainWindow : Window
 {
@@ -169,7 +169,7 @@ public partial class MainWindow : Window
     {
         try
         {
-            var imagePath = AssetPathResolver.FindRequired("mutsu.png");
+            var imagePath = AssetPathResolver.FindRequired("mutsumi.png");
             PetImage.Source = ImageTransparencyService.CreateTransparentImage(imagePath);
         }
         catch (Exception ex)

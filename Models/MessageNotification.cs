@@ -1,4 +1,4 @@
-namespace MutsuPet.Models;
+namespace MutsumiPet.Models;
 
 /// <summary>
 /// 表示从聊天软件窗口状态中识别到的一次消息信号。

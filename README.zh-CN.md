@@ -1,0 +1,201 @@
+<h1 align="center">Mutsumi Pet</h1>
+<p align="center">
+  <a href="README.md">English</a>
+</p>
+
+Mutsumi Pet 是一个 Windows WPF 桌面宠物应用。通过 Win32 API 感知轻量的电脑使用状态，并调用大语言模型生成气泡台词。
+
+> 当前版本：以 GitHub Releases 最新标签为准
+
+---
+
+## 当前状态
+
+- **桌宠主窗口可运行**：入口为 `App.xaml` / `MainWindow.xaml`，主逻辑集中在 `MainWindow.xaml.cs`
+- **LLM 对话链路完整**：通过 OpenAI-compatible `/chat/completions` 接口生成气泡文本，失败时回退到本地备用台词
+- **Windows 使用状态感知已接入**：可读取前台进程、窗口标题、空闲秒数、当前窗口连续使用时长和会话锁定状态
+- **通信软件消息信号提醒已接入**：通过 Win32 窗口事件、任务栏闪烁 Shell hook 和周期补扫识别可能的新消息信号
+- **长文本展示已处理**：LLM 长回复会按标点和长度拆成多段，并按阅读时长依次展示
+
+---
+
+## 功能概览
+
+### 1. 桌宠展示
+
+- 支持左键拖动桌宠位置
+- 右键菜单支持刷新对话、暂停互动、退出
+
+### 2. 电脑使用状态感知
+
+- `WindowsUsageMonitor` 通过 Win32 API 获取前台窗口和空闲状态
+- 当前会记录：
+  - 前台进程名
+  - 前台窗口标题
+  - 空闲秒数
+  - 当前窗口连续使用时间
+  - 最近使用事件
+  - Windows 会话锁定状态
+
+### 3. LLM 气泡对话
+
+- `LlmClient` 调用 OpenAI兼容API 接口生成气泡台词
+- prompt 会区分日常互动和消息提醒
+
+---
+
+## 目录速览
+
+| 路径 | 说明 |
+| --- | --- |
+| `App.xaml` / `App.xaml.cs` | WPF 应用入口 |
+| `MainWindow.xaml` | 桌宠窗口、角色图和气泡布局 |
+| `MainWindow.xaml.cs` | 窗口事件、计时器、拖拽、气泡展示编排 |
+| `Services/LlmClient.cs` | LLM 请求、prompt 构造、响应解析 |
+| `Services/WindowsUsageMonitor.cs` | 前台窗口、空闲时长、会话状态监控 |
+| `Services/ChatAppMessageMonitor.cs` | 通信软件新消息信号识别 |
+| `Services/SpeechQueueService.cs` | 长文本分段和展示时长计算 |
+| `Services/ImageTransparencyService.cs` | 角色图片白底透明化处理 |
+| `Models/` | 使用状态、触发器、消息信号等模型 |
+| `Mutsumi.png` | 桌宠角色形象图 |
+| `.env.example` | LLM 配置模板 |
+
+---
+
+## 快速开始
+
+运行要求：
+
+- Windows 10/11
+- .NET 8 SDK
+- 一个 OpenAI-compatible chat-completions 接口
+
+### 面向使用者：下载 Release
+
+如果你只是想在本地使用，推荐下载 GitHub Release 中已经打包好的 Windows 版本。这种方式不需要克隆源码，也无需安装 .NET 8 SDK。
+
+1. 打开本仓库的 GitHub Releases 页面
+2. 下载最新版本中的 `MutsumiPet-*-win-x64.zip`
+3. 解压到一个本地目录，例如：
+
+```text
+D:\Apps\MutsumiPet
+```
+
+4. 在解压目录中找到 `.env.example`，复制一份并命名为 `.env`
+5. 编辑 `.env`，填入自己的 LLM 配置：
+
+```text
+LLM_API_KEY="replace-with-your-key"
+LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
+LLM_MODEL="your-model-name"
+LLM_TIMEOUT_SECONDS="60"
+```
+
+6. 双击运行 `MutsumiPet.exe`
+
+`.env` 必须和 `MutsumiPet.exe` 放在同一个目录中。请不要把自己的 `.env` 或 API Key 上传到公开仓库、截图或 Issue 中。
+
+如果启动后只显示本地备用台词，通常表示 LLM 配置、网络连接或接口权限存在问题。可以先检查 `.env` 文件名是否正确、API Key 是否可用、`LLM_BASE_URL` 是否指向兼容 OpenAI chat-completions 的 `/v1` 地址。
+
+### 面向开发者：
+
+```powershell
+git clone <your-repo-url>
+Set-Location .\mutsumi_pet
+Copy-Item .\.env.example .\.env
+dotnet restore
+dotnet run
+```
+
+编辑 `.env`，填入自己的 LLM 配置：
+
+```text
+LLM_API_KEY="replace-with-your-key"
+LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
+LLM_MODEL="your-model-name"
+LLM_TIMEOUT_SECONDS="60"
+```
+
+源码方式下，`.env` 位于项目根目录。该文件已被 `.gitignore` 忽略，不应提交到版本库。
+
+---
+
+## 配置与运行时数据
+
+### LLM 配置
+
+应用通过 `.env` 或环境变量读取配置。环境变量优先级高于 `.env`。
+
+| 配置项 | 说明 |
+| --- | --- |
+| `LLM_API_KEY` | LLM API Key |
+| `LLM_BASE_URL` | OpenAI-compatible API 基础地址，通常以 `/v1` 结尾 |
+| `LLM_MODEL` | 模型名称 |
+| `LLM_TIMEOUT_SECONDS` | 请求超时时间，单位秒 |
+
+### 运行时产物
+
+以下内容默认视为本地运行或构建产物，不应提交到 Git：
+
+- `.env`
+- `bin/`
+- `obj/`
+- `artifacts/`
+- `.vs/`
+- `*.user`
+- `*.suo`
+
+---
+
+## 隐私边界
+
+应用可能会把下列上下文发送给你配置的 LLM：
+
+- 前台进程名
+- 前台窗口标题
+- 空闲时间
+- 当前窗口连续使用时间
+- 最近使用事件
+- 会话锁定状态
+- 通信软件新消息信号
+- 通信软件显示名
+- 消息信号时间
+
+应用不会采集或发送：
+
+- 键盘输入内容
+- 屏幕截图
+- 通信软件聊天正文
+- 发送者名称或群名
+- 通信软件本地数据库
+- 网络抓包内容
+- 用户电脑中的文件内容
+
+---
+
+## 打包与发布
+
+建议发布自包含 Windows x64 包：
+
+```powershell
+dotnet publish .\MutsumiPet.csproj `
+  -c Release `
+  -r win-x64 `
+  --self-contained true `
+  /p:PublishSingleFile=true `
+  /p:IncludeNativeLibrariesForSelfExtract=true `
+  /p:EnableCompressionInSingleFile=true `
+  -o .\artifacts\github-release\MutsumiPet-win-x64
+```
+---
+
+## 鸣谢
+
+感谢悠嗖老师绘制的可爱小睦
+
+---
+
+## 许可证
+
+本项目使用 MIT License。详情见 [LICENSE](LICENSE)。

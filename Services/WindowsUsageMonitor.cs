@@ -2,14 +2,15 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using Microsoft.Win32;
-using MutsuPet.Models;
+using MutsumiPet.Models;
 
-namespace MutsuPet.Services;
+namespace MutsumiPet.Services;
 
 public sealed class WindowsUsageMonitor : IDisposable
 {
     private const uint IdleThresholdSeconds = 180;
     private const uint IdleReturnSeconds = 30;
+    private static readonly TimeSpan AppDwellThreshold = TimeSpan.FromSeconds(60);
     private static readonly TimeSpan ContinuousUseThreshold = TimeSpan.FromMinutes(45);
     private readonly object _sessionEventLock = new();
     private IntPtr _lastWindowHandle = IntPtr.Zero;
@@ -17,6 +18,7 @@ public sealed class WindowsUsageMonitor : IDisposable
     private bool _hasCaptured;
     private bool _wasIdle;
     private bool _isSessionLocked;
+    private bool _hasReportedActiveWindowDwell;
     private UsageEventKind? _pendingSessionEvent;
 
     /// <summary>
@@ -42,6 +44,7 @@ public sealed class WindowsUsageMonitor : IDisposable
         {
             _lastWindowHandle = windowHandle;
             _activeWindowStartedAt = now;
+            _hasReportedActiveWindowDwell = false;
         }
 
         _hasCaptured = true;
@@ -129,6 +132,12 @@ public sealed class WindowsUsageMonitor : IDisposable
             return UsageEventKind.AppSwitch;
         }
 
+        if (!_hasReportedActiveWindowDwell && activeWindowDuration >= AppDwellThreshold)
+        {
+            _hasReportedActiveWindowDwell = true;
+            return UsageEventKind.AppDwell;
+        }
+
         return activeWindowDuration >= ContinuousUseThreshold
             ? UsageEventKind.ContinuousUse
             : UsageEventKind.Routine;
@@ -156,6 +165,7 @@ public sealed class WindowsUsageMonitor : IDisposable
         {
             UsageEventKind.Startup => "启动观察",
             UsageEventKind.AppSwitch => "前台应用切换",
+            UsageEventKind.AppDwell => "前台应用停留",
             UsageEventKind.IdleStarted => "进入空闲",
             UsageEventKind.IdleReturned => "空闲后返回",
             UsageEventKind.ContinuousUse => "连续使用",
