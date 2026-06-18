@@ -1,21 +1,14 @@
 <h1 align="center">Mutsumi Pet</h1>
 <p align="center">
+  <img src="assets/droste.png" alt="Mutsumi Pet" width="520">
+</p>
+<p align="center">
   <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 Mutsumi Pet is a Windows WPF desktop pet app. It uses Win32 APIs to observe lightweight computer usage state and calls a large language model to generate speech-bubble lines.
 
-> Current version: see the latest GitHub Release
-
----
-
-## Current Status
-
-- **Desktop pet main window is runnable**: the entry points are `App.xaml` / `MainWindow.xaml`, with main logic in `MainWindow.xaml.cs`
-- **LLM dialogue flow is complete**: the app generates bubble text through an OpenAI-compatible `/chat/completions` endpoint and falls back to local preset lines on failure
-- **Windows usage awareness is integrated**: the app can read foreground process, window title, idle seconds, active-window duration, and session lock state
-- **Messaging app signal reminders are integrated**: likely new-message signals are detected through Win32 window events, taskbar flash shell hooks, and periodic sweeps
-- **Long text display is handled**: long LLM replies are split by punctuation and length, then shown segment by segment according to reading time
+> Current version: see the [latest GitHub Release](https://github.com/Reachrich55/Mutsumi-Pet/releases/latest)
 
 ---
 
@@ -57,7 +50,7 @@ Mutsumi Pet is a Windows WPF desktop pet app. It uses Win32 APIs to observe ligh
 | `Services/SpeechQueueService.cs` | Long-text segmentation and display timing |
 | `Services/ImageTransparencyService.cs` | Character image white-background transparency processing |
 | `Models/` | Models for usage state, triggers, and message signals |
-| `mutsu.png` | Desktop pet character image |
+| `mutsumi.png` | Desktop pet character image |
 | `.env.example` | LLM configuration template |
 
 ---
@@ -70,16 +63,16 @@ Requirements:
 - .NET 8 SDK
 - An OpenAI-compatible chat-completions endpoint
 
-### For Users: Download a Release
+### Download the MutsumiPet.exe
 
 If you only want to use the app locally, downloading the packaged Windows release is recommended. This path does not require cloning the source code or installing the .NET 8 SDK.
 
-1. Open the GitHub Releases page for this repository
-2. Download the latest `MutsuPet-*-win-x64.zip`
+1. Open the [GitHub Releases](https://github.com/Reachrich55/Mutsumi-Pet/releases/latest) page for this repository
+2. Download the latest `MutsumiPet-*-win-x64.zip`
 3. Extract it to a local folder, for example:
 
 ```text
-D:\Apps\MutsuPet
+D:\Apps\MutsumiPet
 ```
 
 4. In the extracted folder, copy `.env.example` and rename the copy to `.env`
@@ -92,9 +85,9 @@ LLM_MODEL="your-model-name"
 LLM_TIMEOUT_SECONDS="60"
 ```
 
-6. Run `MutsuPet.exe`
+6. Run `MutsumiPet.exe`
 
-`.env` must be placed in the same folder as `MutsuPet.exe`. Do not upload your `.env` file or API key to public repositories, screenshots, or issues.
+`.env` must be placed in the same folder as `MutsumiPet.exe`. Do not upload your `.env` file or API key to public repositories, screenshots, or issues.
 
 If the app only shows local fallback lines, the LLM configuration, network connection, or endpoint permission may be invalid. Check that the file is named exactly `.env`, that the API key is usable, and that `LLM_BASE_URL` points to an OpenAI-compatible `/v1` endpoint.
 
@@ -102,7 +95,7 @@ If the app only shows local fallback lines, the LLM configuration, network conne
 
 ```powershell
 git clone <your-repo-url>
-Set-Location .\mutsu_pet
+Set-Location .\mutsumi_pet
 Copy-Item .\.env.example .\.env
 dotnet restore
 dotnet run
@@ -179,7 +172,7 @@ The app does not collect or send:
 Publishing a self-contained Windows x64 package is recommended:
 
 ```powershell
-dotnet publish .\MutsuPet.csproj `
+dotnet publish .\MutsumiPet.csproj `
   -c Release `
   -r win-x64 `
   --self-contained true `
