@@ -6,7 +6,7 @@
   <a href="README.md">English</a>
 </p>
 
-Mutsumi Pet 是一个 Windows WPF 桌面宠物应用。通过 Win32 API 感知轻量的电脑使用状态，并调用大语言模型生成气泡台词。
+Mutsumi Pet 是一个 Windows WPF 桌面宠物应用。通过 Win32 API 轻量感知电脑使用状态，并调用大语言模型生成气泡台词。
 
 > 当前版本：以 [GitHub Releases 最新标签](https://github.com/Reachrich55/Mutsumi-Pet/releases/latest) 为准
 
