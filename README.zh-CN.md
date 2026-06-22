@@ -4,11 +4,12 @@
 </p>
 <p align="center">
   <a href="README.md">English</a>
+  · 简体中文
 </p>
 
 Mutsumi Pet 是一个 Windows WPF 桌面宠物应用。通过 Win32 API 轻量感知电脑使用状态，并调用大语言模型生成气泡台词。
 
-> 当前版本：以 [GitHub Releases 最新标签](https://github.com/Reachrich55/Mutsumi-Pet/releases/latest) 为准
+> 当前版本：v1.1
 
 ---
 
@@ -79,9 +80,9 @@ D:\Apps\MutsumiPet
 5. 编辑 `.env`，填入自己的 LLM 配置：
 
 ```text
-LLM_API_KEY="replace-with-your-key"
-LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
-LLM_MODEL="your-model-name"
+LLM_API_KEY="YOUR_API_KEY"
+LLM_BASE_URL="YOUR_BASE_URL"
+LLM_MODEL="YOUR_MODEL_NAME"
 LLM_TIMEOUT_SECONDS="60"
 ```
 
