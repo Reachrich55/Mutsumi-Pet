@@ -3,12 +3,14 @@
   <img src="assets/droste.png" alt="Mutsumi Pet" width="520">
 </p>
 <p align="center">
+  <a style="text-decoration:none;"style="color:black;"> English </a>
+  ·
   <a href="README.zh-CN.md">简体中文</a>
 </p>
 
 Mutsumi Pet is a Windows WPF desktop pet app. It uses Win32 APIs to observe lightweight computer usage state and calls a large language model to generate speech-bubble lines.
 
-> Current version: see the [latest GitHub Release](https://github.com/Reachrich55/Mutsumi-Pet/releases/latest)
+> Current version: v1.1 
 
 ---
 
@@ -79,9 +81,9 @@ D:\Apps\MutsumiPet
 5. Edit `.env` and fill in your own LLM configuration:
 
 ```text
-LLM_API_KEY="replace-with-your-key"
-LLM_BASE_URL="https://your-openai-compatible-endpoint/v1"
-LLM_MODEL="your-model-name"
+LLM_API_KEY="YOUR_API_KEY"
+LLM_BASE_URL="YOUR_BASE_URL"
+LLM_MODEL="YOUR_MODEL_NAME"
 LLM_TIMEOUT_SECONDS="60"
 ```
 
