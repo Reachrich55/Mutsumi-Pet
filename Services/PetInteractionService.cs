@@ -271,10 +271,10 @@ public sealed class PetInteractionService
         {
             InteractionTrigger.Startup => "我醒啦，今天也慢慢来。",
             InteractionTrigger.SessionUnlock => "欢迎回来，刚才休息得还好吗？",
-            InteractionTrigger.IdleReturn => "你回来了，要不要先伸个懒腰？",
+            InteractionTrigger.IdleReturn => "お帰りなさい",
             InteractionTrigger.ContinuousUse => "已经专注很久啦，眼睛也需要休息。",
             InteractionTrigger.HighFocusApp => $"开始处理 {snapshot.ProcessName} 了吗？我在旁边陪着。",
-            InteractionTrigger.ManualRefresh => "我看了一下，现在状态还不错。",
+            InteractionTrigger.ManualRefresh => "LLM暂时不可用，修改配置文件以启用服务哦。",
             _ => "我在这里，陪你一起完成今天的事。"
         };
     }
