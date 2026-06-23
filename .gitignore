@@ -2,6 +2,11 @@ bin/
 obj/
 artifacts/
 .vs/
+TestResults/
 *.user
 *.suo
 .env
+*.db
+*.db-shm
+*.db-wal
+*.log
