@@ -64,7 +64,7 @@
                     BorderThickness="0"
                     ToolTip="打开对话"
                     Click="MessageButton_Click">
-                <Image Source="assets/enter.png"
+                <Image Source="pack://application:,,,/assets/enter.png"
                        Width="28"
                        Height="28"
                        Stretch="Uniform"
