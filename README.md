@@ -9,7 +9,7 @@
 
 Mutsumi Pet is a WPF desktop pet application. It lightly senses computer usage through Win32 APIs and calls a large language model to generate speech-bubble lines.
 
-> Current version: v1.3
+> Current version: v1.4
 
 ---
 
