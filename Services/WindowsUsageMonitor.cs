@@ -11,7 +11,7 @@ public sealed class WindowsUsageMonitor : IDisposable
     private const uint IdleThresholdSeconds = 180;
     private const uint IdleReturnSeconds = 30;
     private static readonly TimeSpan AppDwellThreshold = TimeSpan.FromSeconds(60);
-    private static readonly TimeSpan ContinuousUseThreshold = TimeSpan.FromMinutes(45);
+    private readonly AppClassifierService _appClassifier;
     private readonly object _sessionEventLock = new();
     private IntPtr _lastWindowHandle = IntPtr.Zero;
     private DateTimeOffset _activeWindowStartedAt = DateTimeOffset.Now;
@@ -25,7 +25,16 @@ public sealed class WindowsUsageMonitor : IDisposable
     /// 初始化 Windows 使用状态监控并订阅会话切换事件。
     /// </summary>
     public WindowsUsageMonitor()
+        : this(new AppClassifierService())
     {
+    }
+
+    /// <summary>
+    /// 初始化 Windows 使用状态监控并订阅会话切换事件。
+    /// </summary>
+    public WindowsUsageMonitor(AppClassifierService appClassifier)
+    {
+        _appClassifier = appClassifier;
         SystemEvents.SessionSwitch += OnSessionSwitch;
     }
 
@@ -34,9 +43,19 @@ public sealed class WindowsUsageMonitor : IDisposable
     /// </summary>
     public UsageSnapshot CaptureSnapshot()
     {
+        return CaptureSnapshot(new UserSettings());
+    }
+
+    /// <summary>
+    /// 按用户设置采集当前前台窗口、空闲时长和最近使用事件。
+    /// </summary>
+    public UsageSnapshot CaptureSnapshot(UserSettings settings)
+    {
         var now = DateTimeOffset.Now;
         var windowHandle = NativeMethods.GetForegroundWindow();
         var idleSeconds = GetIdleSeconds();
+        var idleThresholdSeconds = (uint)Math.Max(30, settings.IdleThresholdSeconds);
+        var isIdle = idleSeconds >= idleThresholdSeconds;
         var firstCapture = !_hasCaptured;
         var windowChanged = windowHandle != _lastWindowHandle;
 
@@ -49,16 +68,25 @@ public sealed class WindowsUsageMonitor : IDisposable
 
         _hasCaptured = true;
         var activeWindowDuration = windowHandle == IntPtr.Zero ? TimeSpan.Zero : now - _activeWindowStartedAt;
-        var eventKind = ResolveEventKind(firstCapture, windowChanged, idleSeconds, activeWindowDuration);
+        var eventKind = ResolveEventKind(
+            firstCapture,
+            windowChanged,
+            idleSeconds,
+            idleThresholdSeconds,
+            TimeSpan.FromMinutes(settings.ContinuousUseMinutes),
+            activeWindowDuration);
         var recentEvent = DescribeEvent(eventKind);
-        _wasIdle = idleSeconds >= IdleThresholdSeconds;
+        _wasIdle = isIdle;
+        var processName = GetProcessName(windowHandle);
 
         return new UsageSnapshot
         {
             CapturedAt = now,
-            ProcessName = GetProcessName(windowHandle),
+            ProcessName = processName,
             WindowTitle = GetWindowTitle(windowHandle),
+            AppCategory = _appClassifier.ClassifyProcess(processName),
             IdleSeconds = idleSeconds,
+            IsIdle = isIdle,
             ActiveWindowDuration = activeWindowDuration,
             EventKind = eventKind,
             RecentEvent = recentEvent,
@@ -104,6 +132,8 @@ public sealed class WindowsUsageMonitor : IDisposable
         bool firstCapture,
         bool windowChanged,
         uint idleSeconds,
+        uint idleThresholdSeconds,
+        TimeSpan continuousUseThreshold,
         TimeSpan activeWindowDuration)
     {
         var pendingSessionEvent = ConsumePendingSessionEvent();
@@ -117,12 +147,13 @@ public sealed class WindowsUsageMonitor : IDisposable
             return UsageEventKind.Startup;
         }
 
-        if (_wasIdle && idleSeconds <= IdleReturnSeconds)
+        var idleReturnSeconds = Math.Min(IdleReturnSeconds, Math.Max(5, idleThresholdSeconds / 2));
+        if (_wasIdle && idleSeconds <= idleReturnSeconds)
         {
             return UsageEventKind.IdleReturned;
         }
 
-        if (!_wasIdle && idleSeconds >= IdleThresholdSeconds)
+        if (!_wasIdle && idleSeconds >= idleThresholdSeconds)
         {
             return UsageEventKind.IdleStarted;
         }
@@ -138,7 +169,7 @@ public sealed class WindowsUsageMonitor : IDisposable
             return UsageEventKind.AppDwell;
         }
 
-        return activeWindowDuration >= ContinuousUseThreshold
+        return activeWindowDuration >= continuousUseThreshold
             ? UsageEventKind.ContinuousUse
             : UsageEventKind.Routine;
     }

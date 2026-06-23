@@ -54,6 +54,22 @@
                                MaxWidth="214" />
                 </Grid>
             </Border>
+
+            <Button Canvas.Left="252"
+                    Canvas.Top="176"
+                    Width="34"
+                    Height="34"
+                    Padding="0"
+                    Background="Transparent"
+                    BorderThickness="0"
+                    ToolTip="打开对话"
+                    Click="MessageButton_Click">
+                <Image Source="assets/enter.png"
+                       Width="28"
+                       Height="28"
+                       Stretch="Uniform"
+                       RenderOptions.BitmapScalingMode="HighQuality" />
+            </Button>
         </Canvas>
     </Viewbox>
 </Window>

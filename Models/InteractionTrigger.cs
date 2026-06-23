@@ -12,5 +12,13 @@ public enum InteractionTrigger
     ContinuousUse,
     SessionUnlock,
     QqMessageReceived,
-    WechatMessageReceived
+    WechatMessageReceived,
+    FocusSessionStarted,
+    FocusSessionEnded,
+    BreakStarted,
+    BreakEnded,
+    BreakDue,
+    DailySummaryReady,
+    ContextSwitchingHigh,
+    DistractionDetected
 }

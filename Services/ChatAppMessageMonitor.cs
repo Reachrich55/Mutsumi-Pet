@@ -86,15 +86,10 @@ public sealed class ChatAppMessageMonitor : IDisposable
     }
 
     /// <summary>
-    /// 停止监听并释放 Win32 事件钩子。
+    /// 停止监听并保留对象以便之后重新启动。
     /// </summary>
-    public void Dispose()
+    public void Stop()
     {
-        if (_isDisposed)
-        {
-            return;
-        }
-
         _sweepTimer.Stop();
         if (_shellHookSource is not null)
         {
@@ -114,6 +109,20 @@ public sealed class ChatAppMessageMonitor : IDisposable
             _eventHook = IntPtr.Zero;
         }
 
+        IsEnabled = false;
+    }
+
+    /// <summary>
+    /// 停止监听并释放 Win32 事件钩子。
+    /// </summary>
+    public void Dispose()
+    {
+        if (_isDisposed)
+        {
+            return;
+        }
+
+        Stop();
         _isDisposed = true;
         GC.SuppressFinalize(this);
     }

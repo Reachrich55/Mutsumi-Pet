@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Threading;
@@ -11,13 +12,17 @@ public partial class MainWindow : Window
     private readonly CancellationTokenSource _shutdownTokenSource = new();
     private readonly DispatcherTimer _pollTimer;
     private readonly DispatcherTimer _speechTimer;
+    private readonly SettingsService _settingsService;
     private readonly WindowsUsageMonitor _usageMonitor;
     private readonly ChatAppMessageMonitor _chatMessageMonitor;
     private readonly LlmClient _llmClient;
     private readonly PetInteractionService _interactionService;
+    private readonly ChatConversationService _chatConversationService;
     private readonly SpeechQueueService _speechQueueService = new();
+    private ChatWindow? _chatWindow;
     private bool _isPaused;
     private bool _isBusy;
+    private bool _isChatBusy;
 
     /// <summary>
     /// 初始化桌宠窗口、服务对象和轮询计时器。
@@ -26,12 +31,29 @@ public partial class MainWindow : Window
     {
         InitializeComponent();
 
-        var settings = AppSettings.Load();
-        _usageMonitor = new WindowsUsageMonitor();
+        var appSettings = AppSettings.Load();
+        var appClassifier = new AppClassifierService();
+        _settingsService = new SettingsService();
+        var usageSessionStore = new UsageSessionStore(Path.Combine(SettingsService.AppDataDirectory, "mutsumi.db"));
+        var usageSessionTracker = new UsageSessionTracker(usageSessionStore, appClassifier);
+        var focusSessionService = new FocusSessionService();
+        var usageSummaryService = new UsageSummaryService(usageSessionStore);
+        _usageMonitor = new WindowsUsageMonitor(appClassifier);
         _chatMessageMonitor = new ChatAppMessageMonitor();
-        _llmClient = new LlmClient(settings);
-        _interactionService = new PetInteractionService(_usageMonitor, _llmClient);
+        _llmClient = new LlmClient(appSettings);
+        _interactionService = new PetInteractionService(
+            _usageMonitor,
+            _llmClient,
+            _settingsService,
+            usageSessionTracker,
+            focusSessionService,
+            usageSummaryService);
+        _chatConversationService = new ChatConversationService(
+            new ChatCommandService(),
+            _interactionService,
+            new ConversationMemoryService());
         _chatMessageMonitor.MessageReceived += ChatMessageMonitor_MessageReceived;
+        _settingsService.SettingsChanged += SettingsService_SettingsChanged;
 
         _pollTimer = new DispatcherTimer
         {
@@ -52,7 +74,7 @@ public partial class MainWindow : Window
     {
         PositionNearBottomRight();
         _pollTimer.Start();
-        _chatMessageMonitor.Start(this);
+        ApplyMessageMonitorState();
         await RunInteractionCheckAsync(force: true);
     }
 
@@ -64,7 +86,10 @@ public partial class MainWindow : Window
         _pollTimer.Stop();
         _speechTimer.Stop();
         _shutdownTokenSource.Cancel();
+        _interactionService.FlushTracking();
+        _settingsService.SettingsChanged -= SettingsService_SettingsChanged;
         _chatMessageMonitor.MessageReceived -= ChatMessageMonitor_MessageReceived;
+        _chatWindow?.Close();
         _chatMessageMonitor.Dispose();
         _usageMonitor.Dispose();
         _llmClient.Dispose();
@@ -125,11 +150,98 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 输入按钮打开单例浮动输入面板。
+    /// </summary>
+    private void MessageButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_chatWindow is not null)
+        {
+            _chatWindow.Activate();
+            return;
+        }
+
+        _chatWindow = new ChatWindow(
+            _chatConversationService,
+            _shutdownTokenSource.Token)
+        {
+            Owner = this
+        };
+        _chatWindow.InputSubmitted += ChatWindow_InputSubmitted;
+        _chatWindow.Closed += ChatWindow_Closed;
+        _chatWindow.Show();
+    }
+
+    /// <summary>
+    /// 对话窗口关闭后清理单例引用。
+    /// </summary>
+    private void ChatWindow_Closed(object? sender, EventArgs e)
+    {
+        if (_chatWindow is not null)
+        {
+            _chatWindow.Closed -= ChatWindow_Closed;
+            _chatWindow.InputSubmitted -= ChatWindow_InputSubmitted;
+            _chatWindow = null;
+        }
+    }
+
+    /// <summary>
+    /// 处理输入面板提交的聊天文本，并将结果回流到原始气泡。
+    /// </summary>
+    private async void ChatWindow_InputSubmitted(object? sender, string input)
+    {
+        if (_isChatBusy)
+        {
+            QueueSpeechText("我还在处理上一条内容。", replaceExisting: true);
+            return;
+        }
+
+        _isChatBusy = true;
+        ShowThinkingBubble();
+        try
+        {
+            var result = await _chatConversationService.SubmitAsync(input, _shutdownTokenSource.Token);
+            if (!string.IsNullOrWhiteSpace(result.Text))
+            {
+                QueueSpeechText(result.Text, replaceExisting: true);
+            }
+
+            if (result.OpenSettings)
+            {
+                OpenSettingsWindow();
+            }
+        }
+        catch (OperationCanceledException)
+        {
+            QueueSpeechText("应用正在关闭，这次消息就先停在这里。", replaceExisting: true);
+        }
+        finally
+        {
+            _isChatBusy = false;
+        }
+    }
+
+    /// <summary>
     /// 右键菜单退出项关闭应用。
     /// </summary>
     private void ExitMenuItem_Click(object sender, RoutedEventArgs e)
     {
         Close();
+    }
+
+    /// <summary>
+    /// 打开隐私与设置窗口。
+    /// </summary>
+    private void OpenSettingsWindow()
+    {
+        var window = new SettingsWindow(_settingsService.Current)
+        {
+            Owner = this
+        };
+
+        if (window.ShowDialog() == true && window.SavedSettings is not null)
+        {
+            _settingsService.Save(window.SavedSettings);
+        }
     }
 
     /// <summary>
@@ -149,11 +261,19 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 用户设置保存后更新运行中的监听状态。
+    /// </summary>
+    private void SettingsService_SettingsChanged(object? sender, UserSettings e)
+    {
+        ApplyMessageMonitorState();
+    }
+
+    /// <summary>
     /// QQ/微信窗口监听到新消息信号时触发优先提醒。
     /// </summary>
     private async void ChatMessageMonitor_MessageReceived(object? sender, Models.MessageNotification notification)
     {
-        if (_isPaused)
+        if (_isPaused || !_settingsService.Current.EnableMessageReminders)
         {
             return;
         }
@@ -193,8 +313,14 @@ public partial class MainWindow : Window
     /// </summary>
     private async Task RunInteractionCheckAsync(bool force)
     {
-        if (_isBusy || (_isPaused && !force))
+        if (_isBusy)
         {
+            return;
+        }
+
+        if (_isPaused && !force)
+        {
+            _interactionService.ProcessTrackingOnly();
             return;
         }
 
@@ -269,6 +395,16 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// 清空当前气泡队列并显示思考中的占位文本。
+    /// </summary>
+    private void ShowThinkingBubble()
+    {
+        _speechTimer.Stop();
+        _speechQueueService.Clear();
+        SpeechText.Text = "小睦正在思考...";
+    }
+
+    /// <summary>
     /// 展示队列中的下一段文本并安排下一次翻页。
     /// </summary>
     private void ShowNextSpeechSegment()
@@ -282,5 +418,20 @@ public partial class MainWindow : Window
         SpeechText.Text = segment.Text;
         _speechTimer.Interval = segment.DisplayDuration;
         _speechTimer.Start();
+    }
+
+    /// <summary>
+    /// 根据设置启停聊天软件消息监听器。
+    /// </summary>
+    private void ApplyMessageMonitorState()
+    {
+        if (_settingsService.Current.EnableMessageReminders)
+        {
+            _chatMessageMonitor.Start(this);
+        }
+        else
+        {
+            _chatMessageMonitor.Stop();
+        }
     }
 }

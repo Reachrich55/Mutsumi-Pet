@@ -21,9 +21,19 @@ public sealed class UsageSnapshot
     public string WindowTitle { get; init; } = "Unknown";
 
     /// <summary>
+    /// 获取前台应用的本地粗粒度分类。
+    /// </summary>
+    public AppCategory AppCategory { get; init; } = AppCategory.Other;
+
+    /// <summary>
     /// 获取距离最后一次用户输入经过的秒数。
     /// </summary>
     public uint IdleSeconds { get; init; }
+
+    /// <summary>
+    /// 获取当前是否已超过空闲阈值。
+    /// </summary>
+    public bool IsIdle { get; init; }
 
     /// <summary>
     /// 获取当前前台窗口已持续停留的时间。
