@@ -9,8 +9,20 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Remove="MutsumiPet.Tests\**\*.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <None Remove="mutsumi.png" />
+    <None Remove="assets\enter.png" />
     <Content Include="mutsumi.png">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="assets\enter.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <None Update=".env">
