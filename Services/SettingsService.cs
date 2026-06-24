@@ -3,11 +3,16 @@ using System.IO;
 
 namespace MutsumiPet.Services;
 
+/// <summary>
+/// 管理用户设置的持久化读写。
+/// 配置文件路径：%AppData%\MutsumiPet\settings.json
+/// </summary>
 public sealed class SettingsService
 {
     private static readonly JsonSerializerOptions SerializerOptions = new()
     {
-        WriteIndented = true
+        WriteIndented = true,
+        PropertyNameCaseInsensitive = true
     };
 
     /// <summary>
@@ -16,7 +21,6 @@ public sealed class SettingsService
     public SettingsService()
     {
         Current = LoadFromDisk();
-        Save(Current);
     }
 
     /// <summary>
@@ -42,10 +46,20 @@ public sealed class SettingsService
 
     /// <summary>
     /// 保存用户设置并通知订阅者。
+    /// API Key 以 DPAPI 加密后写入，不会明文存储。
     /// </summary>
-    public void Save(UserSettings settings)
+    public void Save(UserSettings settings, string? plaintextApiKey = null)
     {
-        Current = settings.CloneNormalized();
+        var normalized = settings.CloneNormalized();
+
+        // 如果传入了新的明文 Key，加密后存储
+        if (!string.IsNullOrWhiteSpace(plaintextApiKey))
+        {
+            normalized.ApiKeyEncrypted = ApiKeyProtection.Protect(plaintextApiKey);
+        }
+        // 否则保留已有的加密值（如果有的话），不覆盖为 null
+
+        Current = normalized;
         Directory.CreateDirectory(AppDataDirectory);
         var json = JsonSerializer.Serialize(Current, SerializerOptions);
         File.WriteAllText(SettingsPath, json);

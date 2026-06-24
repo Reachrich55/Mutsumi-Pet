@@ -14,62 +14,84 @@
         SnapsToDevicePixels="True"
         Loaded="Window_Loaded"
         Closing="Window_Closing"
-        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+        PreviewKeyDown="MainWindow_PreviewKeyDown"
+        MouseLeftButtonDown="Window_MouseLeftButtonDown"
+        MouseMove="Window_MouseMove"
+        MouseLeftButtonUp="Window_MouseLeftButtonUp">
     <Window.ContextMenu>
         <ContextMenu>
+            <MenuItem Header="打开聊天" Click="OpenChatMenuItem_Click" />
+            <Separator />
             <MenuItem Header="刷新对话" Click="RefreshMenuItem_Click" />
+            <MenuItem Header="设置" Click="SettingsMenuItem_Click" />
             <MenuItem x:Name="PauseMenuItem" Header="暂停互动" IsCheckable="True" Click="PauseMenuItem_Click" />
+            <Separator />
+            <MenuItem Header="切换人格">
+                <MenuItem x:Name="MutsumiPersonaMenuItem"
+                          Header="睦子米"
+                          IsCheckable="True"
+                          IsChecked="True"
+                          Tag="mutsumi"
+                          Click="PersonaMenuItem_Click" />
+                <MenuItem x:Name="MortisPersonaMenuItem"
+                          Header="墨提斯"
+                          IsCheckable="True"
+                          Tag="mortis"
+                          Click="PersonaMenuItem_Click" />
+            </MenuItem>
             <Separator />
             <MenuItem Header="退出" Click="ExitMenuItem_Click" />
         </ContextMenu>
     </Window.ContextMenu>
 
-    <Viewbox Stretch="Fill">
-        <Canvas Width="600" Height="600">
-            <Image x:Name="PetImage"
-                   Width="600"
-                   Height="600"
-                   Stretch="Fill"
-                   RenderOptions.BitmapScalingMode="HighQuality" />
-
-            <Border Canvas.Left="58"
-                    Canvas.Top="80"
-                    Width="238"
-                    Height="124"
-                    Padding="10,8"
-                    Background="Transparent"
-                    ClipToBounds="True">
-                <Grid>
-                    <TextBlock x:Name="SpeechText"
-                               Text="我在这里。"
-                               FontFamily="Microsoft YaHei UI"
-                               FontSize="21"
-                               FontWeight="SemiBold"
-                               Foreground="#0B3418"
-                               LineHeight="27"
-                               TextWrapping="Wrap"
-                               TextAlignment="Center"
-                               VerticalAlignment="Center"
-                               HorizontalAlignment="Center"
-                               MaxWidth="214" />
-                </Grid>
-            </Border>
-
-            <Button Canvas.Left="252"
-                    Canvas.Top="176"
-                    Width="34"
-                    Height="34"
-                    Padding="0"
-                    Background="Transparent"
-                    BorderThickness="0"
-                    ToolTip="打开对话"
-                    Click="MessageButton_Click">
-                <Image Source="pack://application:,,,/assets/enter.png"
-                       Width="28"
-                       Height="28"
-                       Stretch="Uniform"
+    <Grid>
+        <!-- 层 1：桌宠图片与按钮（Viewbox 统一缩放） -->
+        <Viewbox x:Name="PetViewbox" Stretch="Fill">
+            <Canvas x:Name="PetCanvas" Width="600" Height="600">
+                <Image x:Name="PetImage"
+                       Width="600"
+                       Height="600"
+                       Stretch="Fill"
                        RenderOptions.BitmapScalingMode="HighQuality" />
-            </Button>
-        </Canvas>
-    </Viewbox>
+
+                <Button Canvas.Left="252"
+                        Canvas.Top="176"
+                        Width="34"
+                        Height="34"
+                        Padding="0"
+                        Background="Transparent"
+                        BorderThickness="0"
+                        ToolTip="打开对话"
+                        Click="MessageButton_Click">
+                    <Image Source="assets/enter.png"
+                           Width="28"
+                           Height="28"
+                           Stretch="Uniform"
+                           RenderOptions.BitmapScalingMode="HighQuality" />
+                </Button>
+            </Canvas>
+        </Viewbox>
+
+        <!-- 层 2：气泡覆盖层（绝对定位，不随 Viewbox 缩放） -->
+        <Border x:Name="SpeechBubble"
+                HorizontalAlignment="Left"
+                VerticalAlignment="Top"
+                Padding="10,8"
+                Background="Transparent"
+                ClipToBounds="False"
+                Visibility="Visible">
+            <TextBlock x:Name="SpeechText"
+                       Text="我在这里。"
+                       FontFamily="Microsoft YaHei UI"
+                       FontSize="21.333"
+                       FontWeight="SemiBold"
+                       Foreground="#0B3418"
+                       LineHeight="27"
+                       TextWrapping="Wrap"
+                       TextTrimming="None"
+                       TextAlignment="Center"
+                       VerticalAlignment="Center"
+                       HorizontalAlignment="Center" />
+        </Border>
+    </Grid>
 </Window>

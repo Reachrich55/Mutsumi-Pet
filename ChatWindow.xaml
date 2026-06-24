@@ -92,7 +92,8 @@
                         <ColumnDefinition Width="42" />
                     </Grid.ColumnDefinitions>
 
-                    <TextBlock Text="和小睦说点什么吧"
+                    <TextBlock x:Name="PlaceholderTextBlock"
+                               Text="和小睦说点什么吧"
                                FontFamily="Microsoft YaHei UI"
                                FontSize="13"
                                Foreground="#8A8D91"

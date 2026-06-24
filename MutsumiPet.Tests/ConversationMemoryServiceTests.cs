@@ -15,10 +15,11 @@ public sealed class ConversationMemoryServiceTests
 
         service.RecordExchange("今天应该先做什么？", "可以先收束当前任务。");
 
-        var memory = service.BuildPromptMemory();
+        var memory = service.BuildPromptMemory("小睦");
 
         Assert.Contains("今天应该先做什么", memory);
         Assert.Contains("可以先收束当前任务", memory);
+        Assert.Contains("小睦：", memory);
     }
 
     /// <summary>
@@ -34,7 +35,7 @@ public sealed class ConversationMemoryServiceTests
             service.RecordExchange($"用户消息 {i}", $"回复 {i}");
         }
 
-        var memory = service.BuildPromptMemory();
+        var memory = service.BuildPromptMemory("小睦");
 
         Assert.True(service.ExchangeCount <= 8);
         Assert.DoesNotContain("用户消息 0", memory);

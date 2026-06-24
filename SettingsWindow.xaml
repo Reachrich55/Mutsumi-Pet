@@ -1,74 +1,289 @@
 <Window x:Class="MutsumiPet.SettingsWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="隐私与设置"
-        Width="430"
+        Title="设置"
+        Width="520"
         Height="560"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
         ShowInTaskbar="False">
-    <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Margin="18">
-            <TextBlock Text="隐私与设置"
-                       FontSize="22"
-                       FontWeight="SemiBold"
-                       Margin="0,0,0,14" />
+    <Grid Margin="0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
 
-            <CheckBox x:Name="EnableTrackingCheckBox"
-                      Content="记录本地使用时间线"
-                      Margin="0,0,0,8" />
-            <CheckBox x:Name="EnableLlmCheckBox"
-                      Content="启用 LLM 台词生成"
-                      Margin="0,0,0,8" />
-            <CheckBox x:Name="EnableMessageRemindersCheckBox"
-                      Content="启用 QQ / 微信消息提醒"
-                      Margin="0,0,0,8" />
-            <CheckBox x:Name="SendWindowTitleToLlmCheckBox"
-                      Content="允许窗口标题进入 LLM 上下文"
-                      Margin="0,0,0,8" />
-            <CheckBox x:Name="StoreWindowTitlesCheckBox"
-                      Content="保存截断后的窗口标题到本地数据库"
-                      Margin="0,0,0,8" />
-            <CheckBox x:Name="EnableUsageSummaryCheckBox"
-                      Content="启用使用摘要"
-                      Margin="0,0,0,8" />
+        <TabControl x:Name="SettingsTabControl" Margin="0,0,0,0">
+            <!-- ═══════ 模型服务 ═══════ -->
+            <TabItem Header="模型服务">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel Margin="12,12,12,8">
+                        <TextBlock Text="API 配置"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16" />
 
-            <Separator Margin="0,10,0,14" />
+                        <!-- API Base URL -->
+                        <TextBlock Text="API Base URL"
+                                   FontSize="13"
+                                   Margin="0,0,0,4" />
+                        <TextBox x:Name="ApiBaseUrlTextBox"
+                                 Margin="0,0,0,14"
+                                 MinHeight="28"
+                                 FontSize="13"
+                                 ToolTip="OpenAI-compatible API 地址，通常以 /v1 结尾" />
 
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="110" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="空闲阈值（秒）"
-                           VerticalAlignment="Center" />
-                <TextBox x:Name="IdleThresholdTextBox"
-                         Grid.Column="1"
-                         MinWidth="90" />
-            </Grid>
+                        <!-- API Key -->
+                        <Grid Margin="0,0,0,4">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="API Key"
+                                       FontSize="13"
+                                       VerticalAlignment="Center" />
+                            <CheckBox x:Name="ShowApiKeyCheckBox"
+                                      Grid.Column="1"
+                                      Content="显示"
+                                      FontSize="12"
+                                      VerticalAlignment="Center"
+                                      Checked="ShowApiKeyCheckBox_Changed"
+                                      Unchecked="ShowApiKeyCheckBox_Changed" />
+                        </Grid>
+                        <Grid Margin="0,0,0,14">
+                            <TextBox x:Name="ApiKeyTextBox"
+                                     MinHeight="28"
+                                     FontSize="13"
+                                     ToolTip="你的 LLM API Key，保存时将以 DPAPI 加密存储" />
+                            <TextBlock x:Name="ApiKeyPlaceholder"
+                                       Text="已保存（未显示）"
+                                       FontSize="13"
+                                       Foreground="#888"
+                                       VerticalAlignment="Center"
+                                       Margin="6,0,0,0"
+                                       IsHitTestVisible="False"
+                                       Visibility="Collapsed" />
+                        </Grid>
 
-            <Grid Margin="0,0,0,8">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*" />
-                    <ColumnDefinition Width="110" />
-                </Grid.ColumnDefinitions>
-                <TextBlock Text="连续使用提醒（分钟）"
-                           VerticalAlignment="Center" />
-                <TextBox x:Name="ContinuousUseTextBox"
-                         Grid.Column="1"
-                         MinWidth="90" />
-            </Grid>
+                        <!-- Model Name -->
+                        <TextBlock Text="模型名称"
+                                   FontSize="13"
+                                   Margin="0,0,0,4" />
+                        <TextBox x:Name="ModelTextBox"
+                                 Margin="0,0,0,14"
+                                 MinHeight="28"
+                                 FontSize="13"
+                                 ToolTip="例如 gpt-4o, claude-sonnet-4-6, qwen3.7-plus" />
 
+                        <!-- Timeout -->
+                        <TextBlock Text="请求超时（秒）"
+                                   FontSize="13"
+                                   Margin="0,0,0,4" />
+                        <TextBox x:Name="TimeoutTextBox"
+                                 Margin="0,0,0,14"
+                                 MinHeight="28"
+                                 FontSize="13"
+                                 ToolTip="建议 30-120 秒" />
+
+                        <!-- Test Connection -->
+                        <Grid Margin="0,4,0,0">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock x:Name="TestResultText"
+                                       Text=""
+                                       FontSize="12"
+                                       VerticalAlignment="Center"
+                                       TextWrapping="Wrap" />
+                            <Button x:Name="TestConnectionButton"
+                                    Grid.Column="1"
+                                    Content="测试连接"
+                                    Width="90"
+                                    Height="32"
+                                    FontSize="13"
+                                    Click="TestConnectionButton_Click" />
+                        </Grid>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═══════ 隐私与监控 ═══════ -->
+            <TabItem Header="隐私与监控">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel Margin="12,12,12,8">
+                        <TextBlock Text="隐私与监控"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16" />
+
+                        <CheckBox x:Name="EnableTrackingCheckBox"
+                                  Content="记录本地使用时间线"
+                                  Margin="0,0,0,10" />
+                        <CheckBox x:Name="EnableLlmCheckBox"
+                                  Content="启用 LLM 台词生成"
+                                  Margin="0,0,0,10" />
+                        <CheckBox x:Name="EnableMessageRemindersCheckBox"
+                                  Content="启用 QQ / 微信消息提醒"
+                                  Margin="0,0,0,10" />
+                        <CheckBox x:Name="SendWindowTitleToLlmCheckBox"
+                                  Content="允许窗口标题进入 LLM 上下文"
+                                  Margin="0,0,0,10" />
+                        <CheckBox x:Name="StoreWindowTitlesCheckBox"
+                                  Content="保存截断后的窗口标题到本地数据库"
+                                  Margin="0,0,0,10" />
+                        <CheckBox x:Name="EnableUsageSummaryCheckBox"
+                                  Content="启用使用摘要"
+                                  Margin="0,0,0,10" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═══════ 交互行为 ═══════ -->
+            <TabItem Header="交互行为">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel Margin="12,12,12,8">
+                        <TextBlock Text="交互行为"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16" />
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="空闲阈值（秒）"
+                                       VerticalAlignment="Center"
+                                       FontSize="13" />
+                            <TextBlock Grid.Column="2"
+                                       Text="秒"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="#888"
+                                       Margin="4,0,0,0" />
+                        </Grid>
+                        <TextBox x:Name="IdleThresholdTextBox"
+                                 Margin="0,0,0,16"
+                                 MinHeight="28"
+                                 FontSize="13"
+                                 ToolTip="超过此时间无操作视为空闲（30-3600）" />
+
+                        <Grid Margin="0,0,0,12">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock Text="连续使用提醒（分钟）"
+                                       VerticalAlignment="Center"
+                                       FontSize="13" />
+                            <TextBlock Grid.Column="2"
+                                       Text="分钟"
+                                       VerticalAlignment="Center"
+                                       FontSize="12"
+                                       Foreground="#888"
+                                       Margin="4,0,0,0" />
+                        </Grid>
+                        <TextBox x:Name="ContinuousUseTextBox"
+                                 Margin="0,0,0,16"
+                                 MinHeight="28"
+                                 FontSize="13"
+                                 ToolTip="连续使用超过此时间将提醒休息（5-240）" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═══════ 显示 ═══════ -->
+            <TabItem Header="显示">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel Margin="12,12,12,8">
+                        <TextBlock Text="显示"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16" />
+
+                        <TextBlock Text="桌宠大小"
+                                   FontSize="13"
+                                   Margin="0,0,0,6" />
+                        <ComboBox x:Name="PetScaleComboBox"
+                                  Margin="0,0,0,18"
+                                  MinHeight="30"
+                                  FontSize="13">
+                            <ComboBoxItem Content="50%" Tag="50" />
+                            <ComboBoxItem Content="75%" Tag="75" />
+                            <ComboBoxItem Content="100%" Tag="100" />
+                            <ComboBoxItem Content="125%" Tag="125" />
+                            <ComboBoxItem Content="150%" Tag="150" />
+                            <ComboBoxItem Content="175%" Tag="175" />
+                        </ComboBox>
+
+                        <TextBlock Text="气泡字号"
+                                   FontSize="13"
+                                   Margin="0,0,0,6" />
+                        <ComboBox x:Name="SpeechFontSizeComboBox"
+                                  Margin="0,0,0,18"
+                                  MinHeight="30"
+                                  FontSize="13">
+                            <ComboBoxItem Content="9 pt" Tag="9" />
+                            <ComboBoxItem Content="10.5 pt" Tag="10.5" />
+                            <ComboBoxItem Content="12 pt" Tag="12" />
+                            <ComboBoxItem Content="14 pt" Tag="14" />
+                            <ComboBoxItem Content="16 pt" Tag="16" />
+                            <ComboBoxItem Content="18 pt" Tag="18" />
+                            <ComboBoxItem Content="20 pt" Tag="20" />
+                            <ComboBoxItem Content="24 pt" Tag="24" />
+                            <ComboBoxItem Content="28 pt" Tag="28" />
+                            <ComboBoxItem Content="32 pt" Tag="32" />
+                        </ComboBox>
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+
+            <!-- ═══════ 启动设置 ═══════ -->
+            <TabItem Header="启动设置">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" Margin="8">
+                    <StackPanel Margin="12,12,12,8">
+                        <TextBlock Text="启动设置"
+                                   FontSize="18"
+                                   FontWeight="SemiBold"
+                                   Margin="0,0,0,16" />
+
+                        <CheckBox x:Name="EnableAutoStartCheckBox"
+                                  Content="Windows 登录后自动启动"
+                                  Margin="0,0,0,10"
+                                  FontSize="13" />
+
+                        <TextBlock x:Name="AutoStartHint"
+                                   Text="仅发布版 exe 支持开机自启。开发模式下（dotnet run）此选项不可用。"
+                                   FontSize="11"
+                                   Foreground="#888"
+                                   TextWrapping="Wrap"
+                                   Margin="0,4,0,0" />
+                    </StackPanel>
+                </ScrollViewer>
+            </TabItem>
+        </TabControl>
+
+        <!-- 底部按钮 -->
+        <Border Grid.Row="1"
+                Background="#F5F5F5"
+                BorderBrush="#E0E0E0"
+                BorderThickness="0,1,0,0"
+                Padding="12,10">
             <StackPanel Orientation="Horizontal"
                         HorizontalAlignment="Right">
                 <Button Content="取消"
                         Width="82"
+                        Height="32"
                         Margin="0,0,8,0"
                         Click="CancelButton_Click" />
                 <Button Content="保存"
                         Width="82"
+                        Height="32"
                         Click="SaveButton_Click" />
             </StackPanel>
-        </StackPanel>
-    </ScrollViewer>
+        </Border>
+    </Grid>
 </Window>
