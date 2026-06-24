@@ -6,7 +6,8 @@ public sealed class ChatConversationService
 {
     private readonly ChatCommandService _commandService;
     private readonly PetInteractionService _interactionService;
-    private readonly ConversationMemoryService _memoryService;
+    private readonly PersonaManager _personaManager;
+    private readonly PersonaConversationMemoryService _personaMemoryService;
 
     /// <summary>
     /// 初始化对话编排服务。
@@ -14,11 +15,13 @@ public sealed class ChatConversationService
     public ChatConversationService(
         ChatCommandService commandService,
         PetInteractionService interactionService,
-        ConversationMemoryService memoryService)
+        PersonaManager personaManager,
+        PersonaConversationMemoryService personaMemoryService)
     {
         _commandService = commandService;
         _interactionService = interactionService;
-        _memoryService = memoryService;
+        _personaManager = personaManager;
+        _personaMemoryService = personaMemoryService;
     }
 
     /// <summary>
@@ -34,6 +37,7 @@ public sealed class ChatConversationService
             };
         }
 
+        var persona = _personaManager.Current;
         var command = _commandService.Parse(input);
         var result = command.Kind switch
         {
@@ -41,7 +45,8 @@ public sealed class ChatConversationService
             {
                 Text = await _interactionService.GetChatReplyAsync(
                     input,
-                    _memoryService.BuildPromptMemory(),
+                    _personaMemoryService.BuildPromptMemory(persona.Id, persona.AssistantPrefix),
+                    persona.Id,
                     cancellationToken)
             },
             ChatCommandKind.Focus => new ChatConversationResult
@@ -86,7 +91,7 @@ public sealed class ChatConversationService
 
         if (!string.IsNullOrWhiteSpace(result.Text))
         {
-            _memoryService.RecordExchange(input, result.Text);
+            _personaMemoryService.RecordExchange(persona.Id, input, result.Text);
         }
 
         return result;

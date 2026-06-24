@@ -102,6 +102,15 @@ public partial class ChatWindow : Window
     }
 
     /// <summary>
+    /// 更新对话窗口标题和占位文字以匹配当前人格。
+    /// </summary>
+    public void UpdatePersona(string displayName)
+    {
+        Title = $"与{displayName}聊天";
+        PlaceholderTextBlock.Text = $"和{displayName}说点什么吧";
+    }
+
+    /// <summary>
     /// 打开或重新激活输入面板。
     /// </summary>
     public new void Activate()

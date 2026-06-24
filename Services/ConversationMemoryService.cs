@@ -32,7 +32,8 @@ public sealed class ConversationMemoryService
     /// <summary>
     /// 构造可放入 LLM prompt 的运行期记忆文本。
     /// </summary>
-    public string BuildPromptMemory()
+    /// <param name="assistantPrefix">当前人格的记忆前缀（如"小睦""墨提斯"）</param>
+    public string BuildPromptMemory(string assistantPrefix)
     {
         if (_recentExchanges.Count == 0)
         {
@@ -43,7 +44,7 @@ public sealed class ConversationMemoryService
         foreach (var (user, assistant) in _recentExchanges)
         {
             builder.Append("用户：").Append(user).AppendLine();
-            builder.Append("小睦：").Append(assistant).AppendLine();
+            builder.Append(assistantPrefix).Append("：").Append(assistant).AppendLine();
         }
 
         return builder.ToString().Trim();
@@ -55,11 +56,19 @@ public sealed class ConversationMemoryService
     public int ExchangeCount => _recentExchanges.Count;
 
     /// <summary>
+    /// 清空所有运行时记忆。
+    /// </summary>
+    public void Clear()
+    {
+        _recentExchanges.Clear();
+    }
+
+    /// <summary>
     /// 按字符预算裁剪最旧的记忆。
     /// </summary>
     private void TrimToBudget()
     {
-        while (_recentExchanges.Count > 0 && BuildPromptMemory().Length > MaxMemoryCharacters)
+        while (_recentExchanges.Count > 0 && BuildPromptMemory("X").Length > MaxMemoryCharacters)
         {
             _recentExchanges.Dequeue();
         }
